@@ -26,30 +26,44 @@ def get_cart_by_user(id_user):
 def add_to_cart():
     try:
         data = request.get_json()
+        print("Received data:", data)  # Para ver los datos que está recibiendo
+
         id_user = data.get('id_user')
-        id_product = data.get('id_product')
-        price_cart = data.get('price_cart')
+        if not id_user:
+            return jsonify({"error": "Missing 'id_user' field"}), 400
 
-        if not id_user or not id_product or not price_cart:
-            return jsonify({"error": "Missing fields"}), 400
+        products = data.get('products')
+        if not products:
+            return jsonify({"error": "Missing 'products' field"}), 400
+        
+        # Verificar cada producto
+        for product in products:
+            product_id = product.get('id_product')
+            if not product_id:
+                return jsonify({"error": "Missing 'id_product' in product"}), 400
 
-        # Verificar disponibilidad del producto
-        product = mongo.product.find_one({"_id": ObjectId(id_product)})
-        if not product:
-            return jsonify({"error": "Product not found"}), 404
+            # Verificar si el producto existe
+            product_db = mongo.product.find_one({"_id": ObjectId(product_id)})
+            if not product_db:
+                return jsonify({"error": f"Product {product_id} not found"}), 404
 
-        if product['stock'] < 1:
-            return jsonify({"error": "Product is out of stock"}), 400
+        total_cart = data.get('total_cart')
+        if total_cart is None:
+            return jsonify({"error": "Missing 'total_cart' field"}), 400
 
+        # Si todo es correcto, agregar el carrito a la base de datos
         cart_item = {
             "id_user": id_user,
-            "id_product": id_product,
-            "price_cart": price_cart
+            "products": products,
+            "total_cart": total_cart
         }
         mongo.shopping_cart.insert_one(cart_item)
         return jsonify({"message": "Product added to cart"}), 201
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("Error occurred:", str(e))  # Imprimir el error en la consola para depuración
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
 
     
     # Eliminar un producto del carrito

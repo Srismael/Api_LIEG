@@ -80,3 +80,38 @@ def checkout():
         return jsonify({"message": "Purchase completed successfully", "sale": sale}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+# Registrar una nueva venta
+@sales_bp.route('/sales', methods=['POST'])
+def create_sale():
+    try:
+        # Obtener los datos del cuerpo de la solicitud
+        data = request.json
+
+        # Validar los campos requeridos
+        required_fields = ['id_user', 'products_sales', 'total_sale', 'payment', 'address']
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Faltan campos obligatorios'}), 400
+
+        # Preparar los datos para insertar en MongoDB
+        sale = {
+            "id_user": data['id_user'],
+            "products_sales": data['products_sales'],  # Lista de productos
+            "total_sale": data['total_sale'],  # Total de la venta
+            "payment": data['payment'],  # Método de pago
+            "shipping_status": "Pendiente",  # Estado inicial de envío
+            "address": data['address'],  # Dirección del usuario
+            "date_sale": datetime.utcnow()  # Fecha de la venta
+        }
+
+        # Insertar la venta en la colección
+        result = mongo.sales_control.insert_one(sale)
+
+        # Devolver una respuesta exitosa con el ID de la venta
+        return jsonify({'message': 'Venta registrada con éxito', 'sale_id': str(result.inserted_id)}), 201
+
+    except Exception as e:
+        # Manejo de errores
+        return jsonify({'error': str(e)}), 500
